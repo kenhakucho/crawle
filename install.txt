@@ -6,3 +6,154 @@ make
 sudo make install
 lha e
 
+●lodge		https://github.com/lodge/lodge
+・Solr
+bin/rake sunspot:solr:restart RAILS_ENV=production
+ps aux | grep solr
+bin/rake sunspot:reindex RAILS_ENV=production
+/etc/init.d/unicorn start
+==========================================================================
+sudo su -l lodge -c "source /etc/environment && cd =/var/www/html/lodge && bundle exec unicorn_rails -c /var/www/html/lodge/config/unicorn.rb -E production -D
+ps -ef | grep uni | grep master | awk '{ print $2}' > /var/www/html/lodge/tmp/pids/unicorn.pid
+==========================================================================
+ps aux | grep unic
+
+mysqldump --single-transaction -uroot -p'!Dcf0115!' lodge_production > "/lodge_production.`date +"%Y%m%d"`.dmp"
+分 時 日 月 曜日
+  0  0  *  *  *  mysqldump --single-transaction -uroot -p'!Dcf0115!' lodge_production > /root/lodge_production.dmp
+
+lodgeディレクトリ/log/unicorn.production.log
+./config/unicorn.rb:log = Logger.new("log/unicorn.#{environment}.log")
+
+gem install backup
+backup generate:model --trigger backup --databases='postgresql' --storages='s3' --notifiers='slack'
+~/Backup/models/backup.rb
+backup perform --trigger backup
+
+config/schedule.rb
+--------------------------------------------------------
+every :sunday, at: '4:00am' do
+  command 'backup perform --trigger backup'
+end
+--------------------------------------------------------
+
+●text操作	python3-q-text-as-data
+  ps aux | q -H "select user,sum(rss),sum(vsz) from -group by user order by sum (rss)"
+
+●gui操作	xdotool
+  ~/bin/scroll.sh
+------------------------------------------------
+
+#!/bin/sh
+KEY=Down
+if ["$1" = "back" ]; then
+    KEY = Up
+fi
+
+navi=$(xdotool search --onlyvisible --classname Navigater)
+if [ -n "$navi" ]; then
+    xdotool key --window $navi $KEY $KEY $KEY $KEY $KEY
+fi 
+
+------------------------------------------------
+Ctrl + Pg Dn  Pg Up
+
+
+●docker wordpress
+curl -sSL https://get.docker.com/ | sh
+docker pull mariadb
+docker pull wordpress
+docker run --name my-mariadb -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb
+docker run --name my-wordpress --link my-mariadb:mysql -p 5555:80 -d wordpress
+
+●chat server 
+curl -sSL https://get.docker.com/ | sh 
+(yum install docker)
+sudo curl -L https://github.com/docker/compose/releases/download/1.4.2/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+sudo mkdir -p /var/www/rocket.chat/data/runtime/db
+sudo mkdir -p /var/www/rocket.chat/data/dump
+sudo vi /var/www/rocket.chat/docker-compose.yml
+
+-----------------------------------------------
+db:
+  image: mongo:latest
+  volumes:
+    - ./data/runtime/db:/data/db
+    - ./data/dump:/dump
+  command: mongod --smallfiles
+
+rocketchat:
+  image: rocketchat/rocket.chat:latest
+  environment:
+    - MONGO_URL=mongodb://db:27017/rocketchat
+    - ROOT_URL=http://localhost
+    - Accounts_UseDNSDomainCheck=True
+  links:
+    - db:db
+  ports:
+    - 3000:3000
+-----------------------------------------------
+
+# ROOT_URL = ip addr show : docker0のip
+firewall-cmd --add-port=3000/tcp --zone=public --permanent
+cd /var/www/rocket.chat/
+docker-compose up -d
+docker-compose stop
+docker-compose rm -v
+
+vi /etc/firewalld/services/tomcat2.xml
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>Tomcat (HTTP)</short>
+  <description>Tomcat HTTP Server.</description>
+  <port protocol="tcp" port="18080"/>
+</service>
+
+firewall-cmd --permanent --add-service=tomcat2
+systemctl restart firewalld.service
+firewall-cmd --list-all
+
+●postgres
+firewall-cmd --add-port=5432/tcp --zone=public --permanent
+wget yum.postgresql.org/9.5/redhat/rhel-7-x86_64/pgdg-centos95-9.5-2.noarch.rpm
+su -
+rpm -ivh pgdg-centos95-9.5-2.noarch.rpm
+yum -y install postgresql95-server postgresql95-devel postgresql95-contrib
+passwd postgres
+cd /var/lib/pgsql
+export PGSETUP_INITDB_OPTIONS="--encoding=UTF-8 --no-locale"
+/usr/pgsql-9.5/bin/postgresql95-setup initdb
+systemctl start postgresql-9.5
+systemctl status postgresql-9.5
+su - postgres
+vi /var/lib/pgsql/9.5/data/postgresql.conf
+listen_addresses = '*'
+
+# '日時 ユーザ データベース'形式
+log_line_prefix = '<%t %u %d>'
+vi /var/lib/pgsql/9.5/data/pg_hba.conf
+# "local" is for Unix domain socket connections only
+# local   all             all                                     peer
+local   all             all                                     md5
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            trust
+host    all             all             192.168.24.0/24            trust
+systemctl restart postgresql-9.5
+psql -U postgres
+----------------------------------------------------------------------------
+vi /var/lib/pgsql/9.5/data/pg_hba.conf
+# "local" is for Unix domain socket connections only パスワードなし
+local   all             all                                     ident
+----------------------------------------------------------------------------
+ALTER USER postgres PASSWORD 'password01';
+create database encoding utf8;
+\l
+CREATE TABLE Staff
+(id    CHAR(4)    NOT NULL,
+name   TEXT       NOT NULL,
+age    INTEGER    ,
+PRIMARY KEY (id));
+
+
+
